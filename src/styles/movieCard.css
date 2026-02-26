@@ -1,0 +1,30 @@
+/* src/styles/movieCard.css */
+.movie-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 25px;
+  padding: 20px 0;
+}
+
+.movie-card {
+  transition: transform 0.2s;
+}
+
+.movie-card:hover {
+  transform: translateY(-10px); /* 마우스 올리면 살짝 들리는 효과 */
+}
+
+.poster-wrapper img {
+  width: 100%;
+  border-radius: 12px;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+}
+
+.movie-title {
+  margin: 10px 0 5px;
+  font-size: 1rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
