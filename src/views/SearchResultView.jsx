@@ -1,7 +1,7 @@
 import MovieCard from '../components/MovieCard';
 
 // 💡 1. 'query'와 'movies'를 부모(App.jsx)로부터 받아와야 합니다.
-export default function SearchResultView({ query, movies,lastMovieRef }) {
+export default function SearchResultView({ query, movies,lastMovieRef,onItemClick }) {
    
   return (
     // 💡 2. 여러 태그를 반환할 때는 반드시 하나로 감싸야 합니다 (<> 또는 <div>)
@@ -19,11 +19,11 @@ export default function SearchResultView({ query, movies,lastMovieRef }) {
             if (movies.length === index+1) {
             return (
               <div ref={lastMovieRef} key={movie.id}>
-                <MovieCard movie={movie} />
+                <MovieCard movie={movie} onClick={onItemClick}/>
               </div>
             );
           }
-          return <MovieCard key={movie.id} movie={movie} />;
+          return <MovieCard key={movie.id} movie={movie} onClick={onItemClick} />;
     })}
       </div>
     </>

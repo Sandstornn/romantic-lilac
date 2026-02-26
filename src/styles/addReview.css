@@ -3,33 +3,61 @@
 /* 전체 감싸는 영역 (내비바/검색창 아래) */
 .add-review-wrapper {
   width: 100%;
-  padding: 0 40px; /* image_cea5b7.png의 검색창 여백과 맞춤 */
+  padding: 0 60px; /* image_cea5b7.png의 검색창 여백과 맞춤 */
   animation: fadeIn 0.3s ease-in-out;
 }
 
-/* 돌아가기 버튼 영역 */
-.back-navigation {
-  padding: 15px 0;
-  border-bottom: 1px solid #333; /* 검색바 아래 경계선 */
-  margin-bottom: 30px;
-}
-
-.back-btn-text {
-  background: none;
-  border: none;
-  color: #888;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: color 0.2s;
-}
-
-.back-btn-text:hover { color: #fff; }
 
 /* 메인 컨텐츠 레이아웃 (좌 포스터, 우 입력) */
 #container_add_rating {
   display: flex;
-  gap: 60px;
-  align-items: flex-start;
+  gap: 40px;
+  align-items: flex-start; /* 💡 상단 기준 정렬 */
+  padding: 20px 0;
+}
+
+.left-section {
+  flex: 0 0 300px; /* 고정 너비 */
+}
+
+.poster-box img {
+  width: 100%;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+/* 💡 중앙 정보: 남은 공간 모두 차지 */
+.middle-section {
+  flex: 1; /* 💡 남는 공간을 꽉 채움 */
+  text-align: left;
+}
+
+.content-title {
+  font-size: 2.5rem;
+  margin-top: 0;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #333;
+  padding-bottom: 10px;
+}
+
+.content-description h4 {
+  color: #888;
+  margin-bottom: 10px;
+}
+
+.content-description p {
+  line-height: 1.8;
+  font-size: 1.1rem;
+  color: #ccc;
+  padding-bottom: 40px;
+  border-bottom: 1px solid #222;
+}
+
+/* 댓글 영역 구분선 */
+.comments-placeholder {
+  margin-top: 40px;
+  padding-top: 20px;
+ 
 }
 
 /* src/styles/addReview.css */

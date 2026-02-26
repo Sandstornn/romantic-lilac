@@ -1,7 +1,11 @@
 // src/components/MovieCard.jsx
-export default function MovieCard({ movie }) {
+export default function MovieCard({ movie,onClick }) {
   return (
-    <div className="movie-card" style={{ cursor: 'pointer', minHeight: '300px' }}>
+    <div className="movie-card" 
+    onClick={() => onClick(movie)}
+    style={{ cursor: 'pointer', minHeight: '300px' }}
+    >
+
       {/* 🖼️ 영화 포스터 (없으면 회색 박스) */}
       <img 
         src={movie.image} 

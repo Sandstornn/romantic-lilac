@@ -146,7 +146,7 @@ function App() {
       isFetching.current = false; // 새로운 검색이 시작되므로 중복 방지 플래그 초기화
       setSelectedItem(null);
       setCurrentView('search'); // 검색 결과 뷰로 전환
-      
+
       // 검색어 안바뀌면 검색이 똑바로 안되던 오류 수정
       if(searchQuery.trim() !==inputValue.trim()){
         setLoading(true); // 처음 검색할 때만 "검색 중" 표시
@@ -170,7 +170,29 @@ function App() {
     <div className="App" style={{ minHeight: '100vh' }}>
       <Navbar onLogoClick={goHome} onGenreClick={handleGenreClick}/>
       
-      <section style={{ padding: '20px 40px', display: 'flex', justifyContent: 'flex-end' }}>
+      <section style={{ 
+        padding: '20px 40px 0px 40px', display: 'flex',
+        // addReview일 때는 양끝 정렬(space-between), 아닐 때는 오른쪽 정렬(flex-end)
+        justifyContent: currentView === 'addReview' ? 'space-between' : 'flex-end', 
+        alignItems: 'center',
+        height: '60px',
+        boxSizing: 'border-box'
+       }}>
+        {/* 1. addReview 페이지일 때만 '홈으로 돌아가기' 버튼을 보여줌 */}
+        {currentView === 'addReview' ? (
+          <div className="back-navigation">
+            <button 
+              className="back-btn-text" 
+              onClick={handleComplete}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', marginTop: '8px' }}
+            >
+              &larr; 돌아가기
+            </button>
+          </div>
+        ) : (
+          // 💡 2. 다른 페이지(홈 등)일 때는 공간을 차지하지 않도록 아무것도 렌더링하지 않음
+          null 
+        )}
         <input 
           type="text" 
           value={inputValue}

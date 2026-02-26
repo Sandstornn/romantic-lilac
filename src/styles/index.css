@@ -95,3 +95,23 @@ a {
 #index_Home_page ul .genre:hover {
     background-color: rgba(255, 255, 255, 0.1); /* 살짝 밝아지는 효과 */
 }
+
+
+
+/* 돌아가기 버튼 영역 */
+.back-navigation {
+  padding: 40px 0;
+  margin-bottom: 30px;
+  margin-top: 20px;
+}
+
+.back-btn-text {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.back-btn-text:hover { color: #412323; }
