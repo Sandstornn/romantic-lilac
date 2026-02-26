@@ -7,13 +7,83 @@ import SearchResultView from './views/SearchResultView';
 import MovieHomeView from './views/MovieHomeView';
 import MusicHomeView from './views/MusicHomeView';
 
+import AddReview from './components/addReview';
+
+// 1. 뷰 컴포넌트들을 한곳에서 관리 (나중에 카테고리가 추가되면 여기만 한 줄 추가하면 끝!)
+const HOME_VIEWS = {
+  movie: (props) => <MovieHomeView {...props} />,
+  music: (props) => <MusicHomeView {...props} />,
+  drama: (props) => <DramaHomeView {...props} />,
+  animation: (props) => <AnimationHomeView {...props} />,
+  game: (props) => <GameHomeView {...props} />,
+  book: (props) => <BookHomeView {...props} />,
+};
+
+
+
+
+
+
 function App() {
   const [inputValue, setInputValue] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [movies, setMovies] = useState([]);
   const [currentView, setCurrentView] = useState('home');
+  const [activeCategory, setActiveCategory] = useState('movie'); // 💡 현재 카테고리 기억용
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false); // 💡 검색 시에만 사용 (스크롤 시에는 리스트 유지)
+
+  // 리뷰 작성 모달 상태 -> 클릭한 아이템으로 모달이 열리고 닫힌다.
+  const [selectedItem, setSelectedItem] = useState(null);
+
+  // 💡 영화 카드를 클릭했을 때 실행될 함수
+  const handleItemClick = (item) => {
+    setSelectedItem(item);   // 클릭한 영화 정보를 저장
+    setCurrentView('addReview'); // 화면을 평가 페이지로 변경
+  };
+
+  // 💡 평가 완료 후 다시 홈으로 돌아오는 함수
+  const handleComplete = () => {
+    setSelectedItem(null);
+    setCurrentView(activeCategory);
+  };
+
+  // 💡 메인 컨텐츠 렌더링 함수
+  const renderMainContent = () => {
+    // 1. 리뷰 작성 중이라면 (최우선)
+    if (currentView === 'addReview' && selectedItem) {
+      return <AddReview item={selectedItem} category={activeCategory} onComplete={handleComplete} />;
+    }
+
+    // 2. 검색 중이라면
+    if (searchQuery) {
+      if (loading && movies.length === 0) return <div>검색 중입니다...</div>;
+      if (movies.length > 0) return (
+        <SearchResultView 
+          query={searchQuery} 
+          movies={movies} 
+          lastMovieRef={lastMovieRef}
+          onItemClick={handleItemClick} 
+        />
+      );
+      return (
+        <div className="no-result">
+          <h2>'{searchQuery}' 결과가 없습니다.</h2>
+        </div>
+      );
+    }
+
+    // 3. 카테고리 홈 (HOME_VIEWS 활용) [cite: 2026-02-25]
+    const SelectedView = HOME_VIEWS[currentView];
+    if (SelectedView) {
+      return SelectedView({ onItemClick: handleItemClick });
+    }
+
+    // 4. 기본 홈
+    return <DefaultHomeView />;
+  };
+
+
 
   const movieProvider = new MovieProvider(import.meta.env.VITE_TMDB_API_KEY); //[cite: 2026-02-21]
   const isFetching = useRef(false); // 💡 중복 로드 방지 안전벨트
@@ -54,6 +124,7 @@ function App() {
       });
     } catch (error) {
       console.error(error);
+      setLoading(false); // 에러 시에도 로딩 상태 해제
     } finally {
       // 1페이지 로딩(Initial Search)일 때만 loading 상태를 꺼줍니다.
       if (targetPage === 1) {
@@ -72,15 +143,28 @@ function App() {
 
   const handleSearch = (e) => {
     if (e.key === 'Enter' && inputValue.trim() !== '') {
-      setLoading(true); // 처음 검색할 때만 "검색 중" 표시
-      setMovies([]);
-      setPage(1);
-      setSearchQuery(inputValue); // useEffect가 트리거되어 fetchMovies 실행됨
+      isFetching.current = false; // 새로운 검색이 시작되므로 중복 방지 플래그 초기화
+      setSelectedItem(null);
+      setCurrentView('search'); // 검색 결과 뷰로 전환
+      
+      // 검색어 안바뀌면 검색이 똑바로 안되던 오류 수정
+      if(searchQuery.trim() !==inputValue.trim()){
+        setLoading(true); // 처음 검색할 때만 "검색 중" 표시
+        setMovies([]);
+        setPage(1);
+        setSearchQuery(inputValue); // useEffect가 트리거되어 fetchMovies 실행됨
+      }
     }
   };
 
-  const goHome = () => { setCurrentView('home'); setMovies([]); setSearchQuery(''); };
-  const handleGenreClick = (genre) => { setCurrentView(genre); setMovies([]); setSearchQuery(''); };
+  const goHome = () => { setCurrentView('home'); setMovies([]); setSearchQuery(''); setInputValue(''); };
+  const handleGenreClick = (genre) => { 
+    setActiveCategory(genre); // 현재 선택된 카테고리 상태 업데이트
+    setCurrentView(genre);     // 화면 전환
+    setMovies([]);
+    setSearchQuery('');
+    setInputValue('');
+   };
 
   return (
     <div className="App" style={{ minHeight: '100vh' }}>
@@ -98,33 +182,10 @@ function App() {
       </section>
 
       <main style={{ padding: '20px 40px' }}>
-        {/* 💡 핵심: loading 중이어도 movies가 있으면 SearchResultView를 계속 보여줘야 스크롤이 안 튐 */}
-        {loading && movies.length === 0 ? (
-          <div>검색 중입니다...</div>
-        ) : movies.length > 0 ? (
-          <SearchResultView 
-            query={searchQuery} 
-            movies={movies} 
-            lastMovieRef={lastMovieRef}  // 💡 4. 작성한 센서 함수를 그대로 전달!
-          /> 
-        )
-          : searchQuery && !loading ? (
-          <div className="no-result">
-            <h2>'{searchQuery}'에 대한 검색 결과가 없습니다.</h2>
-            <p>철자를 확인하거나 다른 검색어를 입력해 보세요.</p>
-          </div>
-        )
-        : currentView === 'movie' ? (
-          <MovieHomeView />
-        ) : currentView === 'music' ? (
-          <MusicHomeView />// [cite: 2026-01-30]
-        ) : (
-          <DefaultHomeView />
-        )}
-        
-        {/* 스크롤 중일 때만 하단에 살짝 표시 */}
-        {!loading && isFetching.current && <div style={{ textAlign: 'center', padding: '20px' }}>불러오는 중...</div>}
+        {renderMainContent()}
       </main>
+
+      {!loading && isFetching.current && <div style={{ textAlign: 'center' }}>불러오는 중...</div>}
     </div>
   );
 }
