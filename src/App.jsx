@@ -2,12 +2,21 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import MovieProvider from './services/MovieProvider';
 import Navbar from './components/Navbar';
 import './styles/index.css';
+import './styles/authModal.css';
+import './styles/topAuthBar.css';
 import DefaultHomeView from './views/DefaultHomeView';
 import SearchResultView from './views/SearchResultView';
 import MovieHomeView from './views/MovieHomeView';
 import MusicHomeView from './views/MusicHomeView';
 
 import AddReview from './components/addReview';
+
+// for supabase auth
+import { supabase } from './services/supabaseClient' //
+
+// 만든 뒤엔 반드시 import 하기
+import TopAuthBar from './components/TopAuthBar'; // 💡 상단 바 불러오기
+import AuthModal from './components/AuthModal';   // 💡 모달 불러오기
 
 // 1. 뷰 컴포넌트들을 한곳에서 관리 (나중에 카테고리가 추가되면 여기만 한 줄 추가하면 끝!)
 const HOME_VIEWS = {
@@ -33,8 +42,13 @@ function App() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false); // 💡 검색 시에만 사용 (스크롤 시에는 리스트 유지)
 
+
   // 리뷰 작성 모달 상태 -> 클릭한 아이템으로 모달이 열리고 닫힌다.
   const [selectedItem, setSelectedItem] = useState(null);
+
+  // 로그인 용
+  const [user, setUser] = useState(null);
+  const [authModalType, setAuthModalType] = useState(null); // 'login', 'signup', 'profile' 또는 null
 
   // 💡 영화 카드를 클릭했을 때 실행될 함수
   const handleItemClick = (item) => {
@@ -166,8 +180,74 @@ function App() {
     setInputValue('');
    };
 
+
+   /* 로그인 전용 코드들 */
+      // 1. 실제 구글과 통신하는 '액션' 함수
+    const triggerGoogleLogin = async () => {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: window.location.origin }
+      });
+      if (error) console.error(error.message);
+    };
+
+    // 2. UI 상태만 바꾸는 '핸들러' 함수들
+    const handleOpenLogin = () => setAuthModalType('login');
+    const handleOpenSignup = () => setAuthModalType('signup');
+    const handleCloseModal = () => setAuthModalType(null);
+  /* 로그인 전용 코드들 =======================================*/
+
+  // 실제 로그아웃 기능 (Supabase 통신) logout 클릭했을 때
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) console.error("로그아웃 에러:", error.message);
+    else setUser(null); // 로그아웃 성공 시 유저 상태 초기화
+  };
+
+  // 💡 4. 새로 추가할 로그인 상태 감시용 useEffect
+  useEffect(() => {
+  // 현재 세션 확인 (새로고침 시 로그인 유지)
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    setUser(session?.user ?? null);
+  });
+
+  // 상태 변화 감지 (로그인/로그아웃 시)
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const currentUser = session?.user ?? null;
+    setUser(currentUser);
+    
+    // 💡 로그인에 성공하면 열려있던 모달을 자동으로 닫아줍니다.
+    if (currentUser) {
+      handleCloseModal();
+    }
+  });
+
+  return () => subscription.unsubscribe();
+  }, []); // 빈 배열 []: 컴포넌트가 처음 켜질 때 딱 한 번만 실행됨
+
+
+
   return (
     <div className="App" style={{ minHeight: '100vh' }}>
+      {/* 2. 상단 바에 '핸들러' 연결 */}
+            <TopAuthBar 
+              user={user} 
+              onLogin={handleOpenLogin} 
+              onLogout={handleLogout} 
+              onMyPageClick={() => setAuthModalType('profile')}
+              onSignup={handleOpenSignup} 
+            />
+
+            {/* 3. 모달에 '액션' 및 '닫기' 연결 */}
+            {authModalType && (
+              <AuthModal 
+                type={authModalType} 
+                onClose={handleCloseModal} 
+                onGoogleLogin={triggerGoogleLogin} 
+                onLogout={handleLogout}
+              />
+            )}
+
       <Navbar onLogoClick={goHome} onGenreClick={handleGenreClick}/>
       
       <section style={{ 
