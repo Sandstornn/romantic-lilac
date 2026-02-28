@@ -99,6 +99,7 @@ a {
 
 
 /* 돌아가기 버튼 영역 */
+/*
 .back-navigation {
   padding: 40px 0;
   margin-bottom: 30px;
@@ -114,4 +115,4 @@ a {
   transition: color 0.2s;
 }
 
-.back-btn-text:hover { color: #412323; }
+.back-btn-text:hover { color: #412323; }*/

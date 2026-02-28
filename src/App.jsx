@@ -1,4 +1,7 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import React,{ useState, useEffect, useRef, useCallback } from 'react';
+// 1. Navigate(리다이렉트용), useLocation(현재 주소 확인용) 추가
+import { useParams,Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
+
 import MovieProvider from './services/MovieProvider';
 import Navbar from './components/Navbar';
 import './styles/index.css';
@@ -8,17 +11,18 @@ import DefaultHomeView from './views/DefaultHomeView';
 import SearchResultView from './views/SearchResultView';
 import MovieHomeView from './views/MovieHomeView';
 import MusicHomeView from './views/MusicHomeView';
-
+import DramaHomeView from './views/DramaHomeView';
+import AnimationHomeView from './views/AnimationHomeView';
+import GameHomeView from './views/GameHomeView';
+import BookHomeView from './views/BookHomeView';
 import AddReview from './components/addReview';
 
-// for supabase auth
-import { supabase } from './services/supabaseClient' //
+// Supabase & Components
+import { supabase } from './services/supabaseClient';
+import TopAuthBar from './components/TopAuthBar';
+import AuthModal from './components/AuthModal';
 
-// 만든 뒤엔 반드시 import 하기
-import TopAuthBar from './components/TopAuthBar'; // 💡 상단 바 불러오기
-import AuthModal from './components/AuthModal';   // 💡 모달 불러오기
-
-// 1. 뷰 컴포넌트들을 한곳에서 관리 (나중에 카테고리가 추가되면 여기만 한 줄 추가하면 끝!)
+// 카테고리 뷰 관리
 const HOME_VIEWS = {
   movie: (props) => <MovieHomeView {...props} />,
   music: (props) => <MusicHomeView {...props} />,
@@ -28,238 +32,229 @@ const HOME_VIEWS = {
   book: (props) => <BookHomeView {...props} />,
 };
 
-
-
-
-
-
 function App() {
   const [inputValue, setInputValue] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [movies, setMovies] = useState([]);
-  const [currentView, setCurrentView] = useState('home');
-  const [activeCategory, setActiveCategory] = useState('movie'); // 💡 현재 카테고리 기억용
+  const [activeCategory, setActiveCategory] = useState('movie');
   const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(false); // 💡 검색 시에만 사용 (스크롤 시에는 리스트 유지)
-
-
-  // 리뷰 작성 모달 상태 -> 클릭한 아이템으로 모달이 열리고 닫힌다.
-  const [selectedItem, setSelectedItem] = useState(null);
-
-  // 로그인 용
+  const [loading, setLoading] = useState(false);
+  // const [selectedItem, setSelectedItem] = useState(null);
   const [user, setUser] = useState(null);
-  const [authModalType, setAuthModalType] = useState(null); // 'login', 'signup', 'profile' 또는 null
+  const [authModalType, setAuthModalType] = useState(null);
 
-  // 💡 영화 카드를 클릭했을 때 실행될 함수
+  const navigate = useNavigate();
+  const location = useLocation(); // 💡 현재 URL 경로를 가져옴
+  const isReviewPage = location.pathname.startsWith('/addReview/'); //💡 현재 리뷰 페이지인지 확인
+
+  // 💡 추가: 브라우저 주소창과 리액트 상태를 동기화하는 감시자
+useEffect(() => {
+  const path = location.pathname;
+
+  // 1. 검색 페이지 주소일 때 (/search/검색어)
+  if (path.startsWith('/search/')) {
+    const urlQuery = decodeURIComponent(path.split('/')[2]);
+    if (urlQuery !== searchQuery) {
+      setLoading(true); // 로딩 시작
+      setSearchQuery(urlQuery);
+      setInputValue(urlQuery);
+      setPage(1);
+      setMovies([]);
+    }
+  } 
+  else if (HOME_VIEWS[path.slice(1)]) {
+    const genre = path.slice(1);
+    if (activeCategory !== genre) {
+      setActiveCategory(genre);
+      setSearchQuery('');
+      setInputValue('');
+      setMovies([]);
+      setPage(1);
+    }
+  }
+  // 그 외 페이지 (홈 / 또는 /addReview 등)에서는 아무것도 초기화하지 않음
+  // (이 부분이 명확해야 검색창 로직이 꼬이지 않습니다.)
+}, [location.pathname]); // 주소가 바뀔 때마다 실행되어 상태를 맞춰줌
+
+
+
+  // 💡 아이템 클릭: 상세 주소로 이동
   const handleItemClick = (item) => {
-    setSelectedItem(item);   // 클릭한 영화 정보를 저장
-    setCurrentView('addReview'); // 화면을 평가 페이지로 변경
+    // setSelectedItem(item);
+    navigate(`/addReview/${item.id}`);
   };
 
-  // 💡 평가 완료 후 다시 홈으로 돌아오는 함수
+  // 💡 평가 완료: 상태 비우고 이전(카테고리 홈)으로 이동
   const handleComplete = () => {
     setSelectedItem(null);
-    setCurrentView(activeCategory);
+    navigate(`/${activeCategory}`); // 또는 navigate(-1)로 진짜 뒤로가기 가능
   };
 
   // 💡 메인 컨텐츠 렌더링 함수
   const renderMainContent = () => {
-    // 1. 리뷰 작성 중이라면 (최우선)
-    if (currentView === 'addReview' && selectedItem) {
-      return <AddReview item={selectedItem} category={activeCategory} onComplete={handleComplete} />;
-    }
+    return (
+      <Routes>
+        <Route path="/addReview/:itemId" element={
+          
+            <AddReview key = {location.pathname} // item={selectedItem} 
+            user = {user} category={activeCategory} onComplete={handleComplete}/>
+          
+        } />
 
-    // 2. 검색 중이라면
-    if (searchQuery) {
-      if (loading && movies.length === 0) return <div>검색 중입니다...</div>;
-      if (movies.length > 0) return (
-        <SearchResultView 
-          query={searchQuery} 
-          movies={movies} 
-          lastMovieRef={lastMovieRef}
-          onItemClick={handleItemClick} 
-        />
-      );
-      return (
-        <div className="no-result">
-          <h2>'{searchQuery}' 결과가 없습니다.</h2>
-        </div>
-      );
-    }
+        <Route path="/search/:query" element={
+          
+            <SearchResultView 
+              query={searchQuery} 
+              movies={movies} 
+              lastMovieRef={lastMovieRef}
+              onItemClick={handleItemClick} 
+            />
+          
+        } />
 
-    // 3. 카테고리 홈 (HOME_VIEWS 활용) [cite: 2026-02-25]
-    const SelectedView = HOME_VIEWS[currentView];
-    if (SelectedView) {
-      return SelectedView({ onItemClick: handleItemClick });
-    }
+        {/* 검색어 없이 /search만 쳤을 때의 예외 처리 */}
+      <Route path="/search" element={<Navigate to="/movie" replace />} />
 
-    // 4. 기본 홈
-    return <DefaultHomeView />;
+        {Object.entries(HOME_VIEWS).map(([path, Component]) => (
+          <Route 
+            key={path} 
+            path={`/${path}`} 
+            element={Component({ onItemClick: handleItemClick })} 
+          />
+        ))}
+
+        <Route path="/" element={<DefaultHomeView />} />
+      </Routes>
+    );
   };
 
-
-
-  const movieProvider = new MovieProvider(import.meta.env.VITE_TMDB_API_KEY); //[cite: 2026-02-21]
-  const isFetching = useRef(false); // 💡 중복 로드 방지 안전벨트
+  // 영화 데이터 로직 (생략 없이 유지)
+  const movieProvider = new MovieProvider(import.meta.env.VITE_TMDB_API_KEY);
+  const isFetching = useRef(false);
   const observer = useRef();
 
-  // 💡 1. 센서 로직 (이 함수를 자식에게 통째로 넘겨야 함)
   const lastMovieRef = useCallback(node => {
     if (isFetching.current) return;
     if (observer.current) observer.current.disconnect();
-    
     observer.current = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting) {
-        setPage(prev => prev + 1); // 바닥 감지 시 페이지 증가
-      }
+      if (entries[0].isIntersecting) setPage(prev => prev + 1);
     });
     if (node) observer.current.observe(node);
   }, []);
 
-  // 💡 2. 데이터 가져오기 함수 (페이지네이션 지원)
   const fetchMovies = async (query, targetPage) => {
     if (isFetching.current) return;
     isFetching.current = true;
-
     try {
       const results = await movieProvider.search(query, targetPage);
-      
       setMovies(prev => {
-        // 💡 사용자님이 말씀하신 HashMap 논리 적용
-        // 기존 영화와 새 영화를 합친 뒤, ID를 기준으로 중복을 제거합니다.
         const allMovies = targetPage === 1 ? results : [...prev, ...results];
         const uniqueMap = new Map();
-        
-        allMovies.forEach(movie => {
-          uniqueMap.set(movie.id, movie); // 같은 ID가 들어오면 덮어씌워져서 중복 제거됨
-        });
-
+        allMovies.forEach(m => uniqueMap.set(m.id, m));
         return Array.from(uniqueMap.values());
       });
     } catch (error) {
       console.error(error);
-      setLoading(false); // 에러 시에도 로딩 상태 해제
     } finally {
-      // 1페이지 로딩(Initial Search)일 때만 loading 상태를 꺼줍니다.
-      if (targetPage === 1) {
-        setLoading(false); 
-      }
+      if (targetPage === 1) setLoading(false);
       isFetching.current = false;
     }
   };
 
-  // 💡 3. 페이지나 검색어가 바뀔 때 호출
   useEffect(() => {
-    if (searchQuery) {
-      fetchMovies(searchQuery, page);
-    }
+    if (searchQuery) fetchMovies(searchQuery, page);
   }, [page, searchQuery]);
 
   const handleSearch = (e) => {
     if (e.key === 'Enter' && inputValue.trim() !== '') {
-      isFetching.current = false; // 새로운 검색이 시작되므로 중복 방지 플래그 초기화
-      setSelectedItem(null);
-      setCurrentView('search'); // 검색 결과 뷰로 전환
-
-      // 검색어 안바뀌면 검색이 똑바로 안되던 오류 수정
-      if(searchQuery.trim() !==inputValue.trim()){
-        setLoading(true); // 처음 검색할 때만 "검색 중" 표시
+      // setSelectedItem(null);
+      navigate(`/search/${encodeURIComponent(inputValue.trim())}`); // 💡 주소 이동
+      /*
+      if(searchQuery.trim() !== inputValue.trim()){
+        setLoading(true);
         setMovies([]);
         setPage(1);
-        setSearchQuery(inputValue); // useEffect가 트리거되어 fetchMovies 실행됨
+        setSearchQuery(inputValue);
       }
+      */
     }
   };
 
-  const goHome = () => { setCurrentView('home'); setMovies([]); setSearchQuery(''); setInputValue(''); };
-  const handleGenreClick = (genre) => { 
-    setActiveCategory(genre); // 현재 선택된 카테고리 상태 업데이트
-    setCurrentView(genre);     // 화면 전환
+  const goHome = () => {
     setMovies([]);
     setSearchQuery('');
     setInputValue('');
-   };
-
-
-   /* 로그인 전용 코드들 */
-      // 1. 실제 구글과 통신하는 '액션' 함수
-    const triggerGoogleLogin = async () => {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo: window.location.origin }
-      });
-      if (error) console.error(error.message);
-    };
-
-    // 2. UI 상태만 바꾸는 '핸들러' 함수들
-    const handleOpenLogin = () => setAuthModalType('login');
-    const handleOpenSignup = () => setAuthModalType('signup');
-    const handleCloseModal = () => setAuthModalType(null);
-  /* 로그인 전용 코드들 =======================================*/
-
-  // 실제 로그아웃 기능 (Supabase 통신) logout 클릭했을 때
-  const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) console.error("로그아웃 에러:", error.message);
-    else setUser(null); // 로그아웃 성공 시 유저 상태 초기화
+    navigate('/'); // 💡 주소 이동
   };
 
-  // 💡 4. 새로 추가할 로그인 상태 감시용 useEffect
+  const handleGenreClick = (genre) => { 
+    setActiveCategory(genre);
+    setMovies([]);
+    setSearchQuery('');
+    setInputValue('');
+    navigate(`/${genre}`); // 💡 주소 이동
+  };
+
+  // Auth 관련 로직
+  const triggerGoogleLogin = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin }
+    });
+    if (error) console.error(error.message);
+  };
+
+  const handleOpenLogin = () => setAuthModalType('login');
+  const handleOpenSignup = () => setAuthModalType('signup');
+  const handleCloseModal = () => setAuthModalType(null);
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (!error) setUser(null);
+  };
+
   useEffect(() => {
-  // 현재 세션 확인 (새로고침 시 로그인 유지)
-  supabase.auth.getSession().then(({ data: { session } }) => {
-    setUser(session?.user ?? null);
-  });
-
-  // 상태 변화 감지 (로그인/로그아웃 시)
-  const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-    const currentUser = session?.user ?? null;
-    setUser(currentUser);
-    
-    // 💡 로그인에 성공하면 열려있던 모달을 자동으로 닫아줍니다.
-    if (currentUser) {
-      handleCloseModal();
-    }
-  });
-
-  return () => subscription.unsubscribe();
-  }, []); // 빈 배열 []: 컴포넌트가 처음 켜질 때 딱 한 번만 실행됨
-
-
+    supabase.auth.getSession().then(({ data: { session } }) => setUser(session?.user ?? null));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      if (currentUser) handleCloseModal();
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
   return (
     <div className="App" style={{ minHeight: '100vh' }}>
-      {/* 2. 상단 바에 '핸들러' 연결 */}
-            <TopAuthBar 
-              user={user} 
-              onLogin={handleOpenLogin} 
-              onLogout={handleLogout} 
-              onMyPageClick={() => setAuthModalType('profile')}
-              onSignup={handleOpenSignup} 
-            />
+      <TopAuthBar 
+        user={user} 
+        onLogin={handleOpenLogin} 
+        onLogout={handleLogout} 
+        onMyPageClick={() => setAuthModalType('profile')}
+        onSignup={handleOpenSignup} 
+      />
 
-            {/* 3. 모달에 '액션' 및 '닫기' 연결 */}
-            {authModalType && (
-              <AuthModal 
-                type={authModalType} 
-                onClose={handleCloseModal} 
-                onGoogleLogin={triggerGoogleLogin} 
-                onLogout={handleLogout}
-              />
-            )}
+      {authModalType && (
+        <AuthModal 
+          type={authModalType} 
+          onClose={handleCloseModal} 
+          onGoogleLogin={triggerGoogleLogin} 
+          onLogout={handleLogout}
+        />
+      )}
 
       <Navbar onLogoClick={goHome} onGenreClick={handleGenreClick}/>
       
       <section style={{ 
-        padding: '20px 40px 0px 40px', display: 'flex',
-        // addReview일 때는 양끝 정렬(space-between), 아닐 때는 오른쪽 정렬(flex-end)
-        justifyContent: currentView === 'addReview' ? 'space-between' : 'flex-end', 
+        padding: '20px 40px 0px 40px', 
+        display: 'flex',
+        // 💡 location 정보를 사용하여 레이아웃 결정
+        // justifyContent: isReviewPage ? 'space-between' : 'flex-end',
+        justifyContent: 'flex-end',  
         alignItems: 'center',
         height: '60px',
         boxSizing: 'border-box'
-       }}>
-        {/* 1. addReview 페이지일 때만 '홈으로 돌아가기' 버튼을 보여줌 */}
-        {currentView === 'addReview' ? (
+      }}>
+        {/* 💡 리뷰 페이지에서는 뒤로가기 버튼이 왼쪽에, 검색창이 오른쪽에 위치하도록 조정 
+        {isReviewPage && (
           <div className="back-navigation">
             <button 
               className="back-btn-text" 
@@ -269,10 +264,8 @@ function App() {
               &larr; 돌아가기
             </button>
           </div>
-        ) : (
-          // 💡 2. 다른 페이지(홈 등)일 때는 공간을 차지하지 않도록 아무것도 렌더링하지 않음
-          null 
         )}
+          */}
         <input 
           type="text" 
           value={inputValue}

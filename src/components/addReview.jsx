@@ -1,13 +1,73 @@
 // src/components/AddReview.jsx
-import React, { useState } from 'react'; // 💡 React.Fragment 사용을 위해 React 추가
+import React, { useState,useEffect } from 'react'; // 💡 React.Fragment 사용을 위해 React 추가
+// 라우팅용
+import { useParams,useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabaseClient';
+import MovieProvider from '../services/MovieProvider';
+import dataBridge from '../services/DataBridge';
 import '../styles/addReview.css';
 
-export default function AddReview({ item, onComplete }) {
+export default function AddReview({ item: propItem, category, onComplete ,user})  {
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const navigate = useNavigate();
 
+  const { itemId } = useParams(); // URL에서 itemId를 가져옵니다.
+  // 상태 관리: 전달받은 item이 있으면 그것을 사용, 없으면 새로 불러온 데이터를 담음
+  const [item, setItem] = useState(propItem || null);
+  const [loading, setLoading] = useState(!propItem); // item이 없으면 로딩 시작
+
+
+  // addReview 컴포넌트에서 편집 모드 여부와 리뷰 ID 상태 추가
+  const [isEditMode, setIsEditMode] = useState(false); 
+  const [reviewId, setReviewId] = useState(null);
+  const [reviews, setReviews] = useState([]); // 💡 우측 목록용 상태
+useEffect(() => {
+    const initPage = async () => {
+      if (!itemId) return;
+
+      try {
+        setLoading(true);
+        
+        // 1. 작품 상세 정보 가져오기 (propItem이 없을 때만)
+        let currentItem = propItem;
+        if (!currentItem) {
+          const movieProvider = new MovieProvider(import.meta.env.VITE_TMDB_API_KEY);
+          currentItem = await movieProvider.getDetail(itemId);
+          if (currentItem) setItem(currentItem);
+        }
+
+        // 2. 내 기존 리뷰가 있는지 확인 (로그인 유저인 경우)
+        if (user && itemId) {
+          const existingReview = await dataBridge.getMyReview(user.id, itemId);
+          if (existingReview) {
+            setRating(existingReview.rating);
+            setComment(existingReview.comment);
+            setIsEditMode(true);
+            setReviewId(existingReview.id);
+          } else {
+            // 새 리뷰 작성을 위해 초기화
+            setRating(0);
+            setComment('');
+            setIsEditMode(false);
+          }
+        }
+
+        // 3. 전체 리뷰 목록 가져오기
+        const publicReviews = await dataBridge.getReviews(itemId);
+        setReviews(publicReviews);
+
+      } catch (error) {
+        console.error("데이터 로드 중 오류:", error);
+        // ❌ 절대 navigate('/') 하지 마세요!
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initPage();
+  }, [itemId, propItem, user]); // 💡 의존성 배열도 깔끔하게 정리
   // 💡 1. undefined 에러 해결을 위해 변수 정의
   const ratingSteps = [5, 4.5, 4, 3.5, 3, 2.5, 2, 1.5, 1, 0.5];
 
@@ -21,22 +81,26 @@ export default function AddReview({ item, onComplete }) {
   };
 
   const handleSubmit = async () => {
+    if (!item || !user) return alert('로그인이 필요합니다!');
     if (rating === 0) return alert('별점을 선택해 주세요!');
     if (isSubmitting) return;
     setIsSubmitting(true);
 
     try {
-      const { error } = await supabase
-        .from('reviews')
-        .insert([{
-          content_id: String(item.id),
-          media_type: item.media_type || 'movie',
-          rating: parseFloat(rating), 
-          comment: comment,
-        }]);
+        await dataBridge.saveComment({
+        userId: user.id, 
+        contentId: item.id,
+        category: category || 'movie',
+        // comment_type: 'REVIEW', // 일반 리뷰니까 REVIEW
+        rating: rating,
+        comment: comment
+      });
 
-      if (error) throw error;
       alert('성공적으로 저장되었습니다! ✨');
+
+      // 저장 성공 후 목록 새로고침!
+      fetchReviews();
+
       if (onComplete) onComplete();
     } catch (error) {
       alert('오류 발생: ' + error.message);
@@ -44,6 +108,26 @@ export default function AddReview({ item, onComplete }) {
       setIsSubmitting(false);
     }
   };
+
+  /* 우측 리뷰들 */
+  // 💡 2. 리뷰 목록 불러오기 함수
+  const fetchReviews = async () => {
+    if (!itemId) return;
+    try {
+      const data = await dataBridge.getReviews(itemId);
+      setReviews(data);
+    } catch (error) {
+      console.error("리뷰 목록 로드 실패:", error);
+    }
+  };
+
+  // 2. 로딩 중 처리
+  if (loading && !item) {
+    return <div style={{ textAlign: 'center', padding: '50px' }}>작품 정보를 불러오는 중...</div>;
+  }
+
+  // 3. 데이터가 결국 없는 경우 처리
+  if (!item) return <div style={{ textAlign: 'center', padding: '50px' }}>작품 정보를 찾을 수 없습니다.</div>;
 
   return (
     <div className="add-review-wrapper">
@@ -54,7 +138,7 @@ export default function AddReview({ item, onComplete }) {
           </div>
           <div className="description">
             <h3>{item.title}</h3>
-            <p>{item.description}</p>
+            <p>{item.overview ||item.description}</p>
           </div>
         </div>
 
@@ -66,7 +150,7 @@ export default function AddReview({ item, onComplete }) {
           
           <div className="content-description" style={{ paddingBottom: '20px' }}>
             <h4>작품 소개</h4>
-            <p>{item.description}</p>
+            <p>{item.overview ||item.description}</p>
           </div>
 
 
@@ -108,15 +192,38 @@ export default function AddReview({ item, onComplete }) {
           </button>
         </div>
 
+        {/* 💡 4. 우측 섹션: 실제 데이터 바인딩 */}
         <div className="right-section">
-          
-
-          {/* 💡 향후 여기에 댓글(감상평) 리스트가 추가될 예정입니다 */}
-            <div className="comments-placeholder">
-              <h4>감상평 목록</h4>
-              <p style={{ color: '#666' }}>아직 작성된 감상평이 없습니다.</p>
-            </div>
+          <div className="comments-header">
+            <h4>감상평 목록 ({reviews.length})</h4>
           </div>
+          
+          <div className="comments-list">
+            {reviews.length > 0 ? (
+                    reviews.map((rev) => (
+                <div key={rev.id} className={`comment-item ${rev.comment.length > 100 ? 'is-long' : 'is-short'}`}>
+                  <div className="comment-top">
+                    <span className="comment-star">⭐ {rev.rating}</span>
+                    <span className="comment-user">익명 사용자</span> {/* 💡 나중에 rev.user_email 등으로 변경 */}
+                  </div>
+                  {/* 💡 여기에 hover 효과가 적용됩니다 */}
+                  <p className="comment-text" title="클릭하거나 마우스를 올리면 전체 내용을 볼 수 있습니다.">
+                    {rev.comment}
+                    <span className="comment-date">
+                      {new Date(rev.created_at).toLocaleDateString()}
+                    </span>
+                  </p>
+
+                </div>
+              ))  
+            ) : (
+              <div className="no-comments">
+                <p>아직 작성된 감상평이 없습니다.</p>
+                <p>첫 번째 리뷰어가 되어보세요!</p>
+              </div>
+            )}
+          </div>
+        </div>
 
           
         </div>

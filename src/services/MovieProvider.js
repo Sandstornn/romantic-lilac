@@ -27,4 +27,16 @@ export default class MovieProvider extends BaseProvider {
       rating: movie.vote_average
     }));
   }
+
+  async getDetail(id) {
+    const url = `https://api.themoviedb.org/3/movie/${id}?api_key=${this.apiKey}&language=ko-KR`;
+    const response = await fetch(url);
+    const data = await response.json();
+    return {
+      id: data.id,
+      title: data.title,
+      image: `https://image.tmdb.org/t/p/w500${data.poster_path}`,
+      overview: data.overview
+    };
+  }
 }

@@ -135,3 +135,101 @@ textarea {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+
+
+/* 우측 댓글 리스트 */
+/* 오른쪽 섹션 전체 높이 고정 */
+/* 💡 오른쪽 섹션: 여기서 키를 꽉 잡아야 합니다 */
+#container_add_rating .right-section {
+  flex: 0 0 350px; /* 너비 고정 (비율 깨짐 방지) */
+  height: 700px;   /* 전체 높이 고정 */
+  display: flex;
+  flex-direction: column; /* 세로로 배치 (헤더 + 리스트) */
+  background: #f9f9f9;
+  border-radius: 15px;
+  border: 1px solid #eee;
+}
+
+/* 댓글 헤더 (고정) */
+#container_add_rating .comments-header {
+  padding: 15px 20px;
+  border-bottom: 1px solid #eee;
+  flex-shrink: 0; /* 헤더가 찌그러지지 않게 */
+}
+
+/* 💡 댓글 리스트: 여기가 실제 스크롤 영역 */
+#container_add_rating .comments-list {
+  flex: 1;           /* 남은 공간 다 차지 */
+  overflow-y: auto;  /* 내용 넘치면 스크롤 생성 */
+  padding: 15px;
+}
+
+/* 개별 댓글 아이템 */
+#container_add_rating .comment-item {
+  background: #fff;
+  padding: 12px 12px 0px 12px; 
+  border-radius: 8px;
+  margin-bottom: 0px;
+  border: 1px solid #eee;
+  flex-direction: column;
+  transition: transform 0.2s ease;
+}
+
+#container_add_rating .comment-top {
+  display: flex;
+  justify-content: space-between; /* 💡 핵심: 요소 사이의 간격을 최대로 벌림 */
+  align-items: center;           /* 높이 중앙 정렬 */
+  margin-bottom: 10px;
+  font-size: 0.85rem;
+}
+
+
+#container_add_rating .comment-date {
+  display: flex;
+  justify-content: flex-end;
+  transition: all 0.3s ease; /* 부드러운 애니메이션 */
+  font-size: 0.7rem;
+  margin-top: 10px;
+  margin-bottom: 6px;
+  align-self: flex-end;
+  color: #888;
+}
+
+#container_add_rating .comment-star {
+  font-weight: bold;
+  color: #ffbb00; /* 별점 강조 색상 */
+}
+
+/* 💡 마우스 갖다대면 내용 다 보여주는 마법 */
+#container_add_rating .comment-text {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #555;
+  margin:0;
+  
+  /* 3줄 제한 */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 14px;
+    line-height: 1.6; /* 줄 간격을 조금 넓히면 가독성이 좋아집니다 */
+    color: #444;
+    
+    /* 💡 핵심: 저장된 \n 문자를 줄바꿈으로 렌더링합니다 */
+    white-space: pre-wrap; 
+    
+    /* 단어가 너무 길어 영역을 뚫고 나가는 것 방지 */
+    word-break: break-word; 
+
+}
+
+/* 아이템에 마우스 올렸을 때 텍스트 펼치기 */
+#container_add_rating .comment-item:hover .comment-text {
+  -webkit-line-clamp: unset; /* 줄 제한 해제 */
+  overflow: visible;
+  color: #000;
+}
+/* =================== */
