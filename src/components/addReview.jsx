@@ -110,7 +110,8 @@ useEffect(() => {
         // comment_type: 'REVIEW', // 일반 리뷰니까 REVIEW
         rating: rating,
         comment: comment,
-        item: item
+        item: item,
+        title: item.title
       });
 
       alert('성공적으로 저장되었습니다! ✨');

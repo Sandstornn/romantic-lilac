@@ -19,23 +19,39 @@ export default class GameProvider {
     return data;
   }
 
-  // 게임 상세 정보 가져오기 메서드 추가
-  async fetchGameById(gameId) {
-    if (!gameId) return null;
+  // src/services/GameProvider.js
 
-    // Edge Function 호출 시 body에 'id'라는 이름으로 넘겨줍니다 (Edge Function의 const { id } 와 매칭)
-    const { data, error } = await supabase.functions.invoke('rapid-worker', {
-      body: { 
-        type: 'detail', 
-        id: String(gameId) 
-      }
-    });
+async fetchGameById(gameId) {
+  if (!gameId) return null;
 
-    if (error || !data) {
-      console.error("게임 정보 로드 실패:", error);
-      return null;
-    }
+  const { data: existingReview, error: dbError } = await supabase
+    .from('reviews')
+    .select('*')
+    .eq('content_id', String(gameId))
+    .eq('media_type', 'game')
+    .not('metadata', 'is', null)
+    .limit(1)
+    .maybeSingle();
 
-    return data; // Edge Function에서 이미 가공(mapping)해서 보내주므로 바로 반환
+  if (!dbError && existingReview) {
+    console.log("🚀 유효한 캐시 발견!");
+    const m = existingReview.metadata;
+    return {
+      id: gameId,
+      title: existingReview.title,
+      subTitle: m.release_year,
+      image: m.poster_path,
+      description: m.summary || m.overview || "",
+      rating: String(existingReview.rating || "0.0"),
+      overview: m.summary || m.overview || ""
+    };
   }
+
+  // 캐시가 없거나 제목이 없는 부실한 캐시라면 API 호출!
+  const { data: apiData } = await supabase.functions.invoke('rapid-worker', {
+    body: { type: 'detail', id: String(gameId) }
+  });
+
+  return apiData;
+}
 }

@@ -1,7 +1,7 @@
 import ItemCard from '../components/ItemCard';
 
 // 💡 category 프롭을 추가로 받아야 ItemCard에서 장르별 표시가 가능합니다.
-export default function SearchResultView({ query, items, lastMovieRef, onItemClick, category }) {
+export default function SearchResultView({ query, items, lastItemRef, onItemClick, category }) {
    
   return (
     <> 
@@ -17,7 +17,7 @@ export default function SearchResultView({ query, items, lastMovieRef, onItemCli
             // 💡 마지막 영화 카드에만 감시용 ref를 달아줍니다.
             if (items.length === index + 1) {
               return (
-                <div ref={lastMovieRef} key={item.id}>
+                <div ref={lastItemRef} key={item.id}>
                   {/* 💡 movie={movie}를 item={item}로 변경! */}
                   <ItemCard item={item} category={category} onClick={onItemClick}/>
                 </div>

@@ -88,7 +88,12 @@ function App() {
   };
 
   const handleComplete = () => {
+    if (window.history.length > 1) {
+    navigate(-1);
+  } else {
+    // 히스토리가 없다면 기본 페이지(홈)로 이동
     navigate(`/${activeCategory}`);
+  }
   };
 
   const renderMainContent = () => {
@@ -133,10 +138,10 @@ function App() {
 
 
   const lastItemRef = useCallback(node => {
-    if (isFetching.current) return;
+    //if (isFetching.current) return;
     if (observer.current) observer.current.disconnect();
     observer.current = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting) setPage(prev => prev + 1);
+      if (entries[0].isIntersecting&& !isFetching.current) setPage(prev => prev + 1);
     });
     if (node) observer.current.observe(node);
   }, []);
@@ -161,7 +166,7 @@ function App() {
         // 💡 내부 변수명도 generic하게: allMovies -> allItems
         const allItems = targetPage === 1 ? results : [...prev, ...results];
         const uniqueMap = new Map();
-        allItems.forEach(m => uniqueMap.set(m.id, m));
+        allItems.forEach(m => uniqueMap.set(String(m.id), m));
         return Array.from(uniqueMap.values());
       });
     } catch (error) {

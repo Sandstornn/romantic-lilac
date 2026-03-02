@@ -4,7 +4,7 @@ import { supabase } from './supabaseClient';
 
 class DataBridge {
   // 💡 리뷰 저장 (item 매개변수 추가: API에서 받은 원본 데이터)
-  async saveComment({ userId, contentId, category, rating, comment, item, parentId = null }) {
+  async saveComment({ userId,title, contentId, category, rating, comment, item, parentId = null }) {
     let metadata = {};
 
     // 💡 카테고리에 따라 저장할 상세 정보를 다르게 구성합니다.
@@ -20,10 +20,10 @@ class DataBridge {
 
       case 'game':
         metadata = {
-          cover_url: item.poster_path, // IGDB 가공 이미지 주소
+          poster_path: item.image, // IGDB 가공 이미지 주소
           release_year: item.release_date,
           summary: item.overview,
-          platforms: item.platforms || [] // 게임용 특화 데이터
+          platforms: item.platforms || [], // 게임용 특화 데이터
         };
         break;
 
@@ -44,6 +44,7 @@ class DataBridge {
         rating: parseFloat(rating),
         comment: comment,
         parent_id: parentId,
+        title: title,
         metadata: metadata, // 💡 새롭게 추가된 JSONB 필드
         created_at: new Date().toISOString()
       }], {
