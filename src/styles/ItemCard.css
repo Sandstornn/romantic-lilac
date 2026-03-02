@@ -1,4 +1,4 @@
-/* src/styles/movieCard.css */
+/* src/styles/ItemCard.css */
 .movie-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -6,11 +6,11 @@
   padding: 20px 0;
 }
 
-.movie-card {
+.item-card {
   transition: transform 0.2s;
 }
 
-.movie-card:hover {
+.item-card:hover {
   transform: translateY(-10px); /* 마우스 올리면 살짝 들리는 효과 */
 }
 

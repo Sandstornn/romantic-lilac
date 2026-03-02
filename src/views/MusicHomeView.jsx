@@ -1,6 +1,6 @@
-import MovieCard from '../components/MovieCard'; // 💡 이제 이게 진짜 존재해야 해요!
+import ItemCard from '../components/ItemCard'; // 💡 이제 이게 진짜 존재해야 해요!
 
-export default function MovieHomeView() {
+export default function MusicHomeView() {
   // 진짜 영화 같은 가짜 데이터를 만들어줍니다.
   const dummyMovies = [
     { id: 1, title: '로맨틱 라일락 추천 1', subTitle: '2026', rating: 4.5, image: 'https://via.placeholder.com/500x750?text=Movie+1' },
@@ -21,9 +21,9 @@ export default function MovieHomeView() {
         gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', 
         gap: '25px' 
       }}>
-        {/* 💡 복잡한 div 대신 MovieCard 하나로 끝! */}
+        {/* 💡 복잡한 div 대신 ItemCard 하나로 끝! */}
         {dummyMovies.map((movie) => (
-          <MovieCard key={movie.id} movie={movie} />
+          <ItemCard key={movie.id} movie={movie} />
         ))}
       </div>
     </>

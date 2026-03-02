@@ -1,8 +1,10 @@
-import React,{ useState, useEffect, useRef, useCallback } from 'react';
-// 1. Navigate(리다이렉트용), useLocation(현재 주소 확인용) 추가
-import { useParams,Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useParams, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 
 import MovieProvider from './services/MovieProvider';
+import GameProvider from './services/GameProvider';
+// import BookProvider from './services/BookProvider'; 
+
 import Navbar from './components/Navbar';
 import './styles/index.css';
 import './styles/authModal.css';
@@ -17,12 +19,11 @@ import GameHomeView from './views/GameHomeView';
 import BookHomeView from './views/BookHomeView';
 import AddReview from './components/addReview';
 
-// Supabase & Components
+import accountService from './services/ExternalAccountService';
 import { supabase } from './services/supabaseClient';
 import TopAuthBar from './components/TopAuthBar';
 import AuthModal from './components/AuthModal';
 
-// 카테고리 뷰 관리
 const HOME_VIEWS = {
   movie: (props) => <MovieHomeView {...props} />,
   music: (props) => <MusicHomeView {...props} />,
@@ -35,85 +36,79 @@ const HOME_VIEWS = {
 function App() {
   const [inputValue, setInputValue] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [movies, setMovies] = useState([]);
+  
+  // movies -> items
+  const [items, setItems] = useState([]); 
   const [activeCategory, setActiveCategory] = useState('movie');
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
-  // const [selectedItem, setSelectedItem] = useState(null);
   const [user, setUser] = useState(null);
   const [authModalType, setAuthModalType] = useState(null);
 
   const navigate = useNavigate();
-  const location = useLocation(); // 💡 현재 URL 경로를 가져옴
-  const isReviewPage = location.pathname.startsWith('/addReview/'); //💡 현재 리뷰 페이지인지 확인
+  const location = useLocation(); 
+  const isReviewPage = location.pathname.startsWith('/addReview/');
 
-  // 💡 추가: 브라우저 주소창과 리액트 상태를 동기화하는 감시자
-useEffect(() => {
-  const path = location.pathname;
+  useEffect(() => {
+  const path = location.pathname; // 예: /game/search/포켓몬
+  const segments = path.split('/'); // ['', 'game', 'search', '포켓몬']
 
-  // 1. 검색 페이지 주소일 때 (/search/검색어)
-  if (path.startsWith('/search/')) {
-    const urlQuery = decodeURIComponent(path.split('/')[2]);
-    if (urlQuery !== searchQuery) {
-      setLoading(true); // 로딩 시작
+  // 💡 인덱스 2번이 'search'인 경우 (/:category/search/:query)
+  if (segments[2] === 'search') {
+    const urlCategory = segments[1]; // game
+    const urlQuery = decodeURIComponent(segments[3]); // 포켓몬
+
+    if (urlQuery !== searchQuery || urlCategory !== activeCategory) {
+      setLoading(true);
+      setActiveCategory(urlCategory); // 💡 카테고리 상태 업데이트
       setSearchQuery(urlQuery);
       setInputValue(urlQuery);
       setPage(1);
-      setMovies([]);
+      setItems([]);
     }
+    fetchItems(urlQuery, 1, urlCategory);
   } 
+  // 기존 장르 홈 (/:category) 로직
   else if (HOME_VIEWS[path.slice(1)]) {
     const genre = path.slice(1);
     if (activeCategory !== genre) {
       setActiveCategory(genre);
       setSearchQuery('');
       setInputValue('');
-      setMovies([]);
+      setItems([]);
       setPage(1);
+      
     }
   }
-  // 그 외 페이지 (홈 / 또는 /addReview 등)에서는 아무것도 초기화하지 않음
-  // (이 부분이 명확해야 검색창 로직이 꼬이지 않습니다.)
-}, [location.pathname]); // 주소가 바뀔 때마다 실행되어 상태를 맞춰줌
+}, [location.pathname]);
 
 
-
-  // 💡 아이템 클릭: 상세 주소로 이동
   const handleItemClick = (item) => {
-    // setSelectedItem(item);
-    navigate(`/addReview/${item.id}`);
+    navigate(`/${activeCategory}/addReview/${item.id}`);
   };
 
-  // 💡 평가 완료: 상태 비우고 이전(카테고리 홈)으로 이동
   const handleComplete = () => {
-    setSelectedItem(null);
-    navigate(`/${activeCategory}`); // 또는 navigate(-1)로 진짜 뒤로가기 가능
+    navigate(`/${activeCategory}`);
   };
 
-  // 💡 메인 컨텐츠 렌더링 함수
   const renderMainContent = () => {
     return (
       <Routes>
-        <Route path="/addReview/:itemId" element={
-          
-            <AddReview key = {location.pathname} // item={selectedItem} 
-            user = {user} category={activeCategory} onComplete={handleComplete}/>
-          
+        <Route path="/:category/addReview/:itemId" element={
+          <AddReview key={location.pathname} user={user} category={activeCategory} onComplete={handleComplete}/>
         } />
 
-        <Route path="/search/:query" element={
-          
-            <SearchResultView 
-              query={searchQuery} 
-              movies={movies} 
-              lastMovieRef={lastMovieRef}
-              onItemClick={handleItemClick} 
-            />
-          
+        <Route path="/:category/search/:query" element={
+          <SearchResultView 
+            query={searchQuery} 
+            items={items} 
+            lastItemRef={lastItemRef} 
+            onItemClick={handleItemClick} 
+            category={activeCategory}
+          />
         } />
 
-        {/* 검색어 없이 /search만 쳤을 때의 예외 처리 */}
-      <Route path="/search" element={<Navigate to="/movie" replace />} />
+        <Route path="/search" element={<Navigate to="/movie" replace />} />
 
         {Object.entries(HOME_VIEWS).map(([path, Component]) => (
           <Route 
@@ -128,12 +123,16 @@ useEffect(() => {
     );
   };
 
-  // 영화 데이터 로직 (생략 없이 유지)
+  // movie 전용 코드는 이름 유지
   const movieProvider = new MovieProvider(import.meta.env.VITE_TMDB_API_KEY);
+  const gameProvider = new GameProvider(import.meta.env.VITE_IGDB_CLIENT_ID, import.meta.env.VITE_IGDB_CLIENT_SECRET);
+
   const isFetching = useRef(false);
   const observer = useRef();
 
-  const lastMovieRef = useCallback(node => {
+
+
+  const lastItemRef = useCallback(node => {
     if (isFetching.current) return;
     if (observer.current) observer.current.disconnect();
     observer.current = new IntersectionObserver(entries => {
@@ -142,15 +141,27 @@ useEffect(() => {
     if (node) observer.current.observe(node);
   }, []);
 
-  const fetchMovies = async (query, targetPage) => {
+  const fetchItems = async (query, targetPage,category) => {
     if (isFetching.current) return;
     isFetching.current = true;
     try {
-      const results = await movieProvider.search(query, targetPage);
-      setMovies(prev => {
-        const allMovies = targetPage === 1 ? results : [...prev, ...results];
+      let results = [];
+      
+      if (category === 'movie') {
+        results = await movieProvider.search(query, targetPage);
+      } else if (category === 'game') {
+        results = await gameProvider.search(query,targetPage); 
+      } else if (category === 'book') {
+        results = await BookProvider.search(query);
+      } else {
+        results = await movieProvider.search(query, targetPage);
+      }
+
+      setItems(prev => {
+        // 💡 내부 변수명도 generic하게: allMovies -> allItems
+        const allItems = targetPage === 1 ? results : [...prev, ...results];
         const uniqueMap = new Map();
-        allMovies.forEach(m => uniqueMap.set(m.id, m));
+        allItems.forEach(m => uniqueMap.set(m.id, m));
         return Array.from(uniqueMap.values());
       });
     } catch (error) {
@@ -162,81 +173,69 @@ useEffect(() => {
   };
 
   useEffect(() => {
-    if (searchQuery) fetchMovies(searchQuery, page);
-  }, [page, searchQuery]);
+    if (searchQuery) fetchItems(searchQuery, page, activeCategory); // 💡 fetchItems로 호출
+  }, [page, searchQuery, activeCategory]); // 💡 activeCategory도 의존성에 추가
 
   const handleSearch = (e) => {
     if (e.key === 'Enter' && inputValue.trim() !== '') {
-      // setSelectedItem(null);
-      navigate(`/search/${encodeURIComponent(inputValue.trim())}`); // 💡 주소 이동
-      /*
-      if(searchQuery.trim() !== inputValue.trim()){
-        setLoading(true);
-        setMovies([]);
-        setPage(1);
-        setSearchQuery(inputValue);
-      }
-      */
+      navigate(`/${activeCategory}/search/${encodeURIComponent(inputValue.trim())}`)
     }
   };
 
   const goHome = () => {
-    setMovies([]);
+    setItems([]); // 💡 movies -> items
     setSearchQuery('');
     setInputValue('');
-    navigate('/'); // 💡 주소 이동
+    navigate('/'); 
   };
 
   const handleGenreClick = (genre) => { 
     setActiveCategory(genre);
-    setMovies([]);
+    setItems([]); // 💡 movies -> items
     setSearchQuery('');
     setInputValue('');
-    navigate(`/${genre}`); // 💡 주소 이동
+    navigate(`/${genre}`); 
   };
 
-  // Auth 관련 로직
-  const triggerGoogleLogin = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: window.location.origin }
-    });
-    if (error) console.error(error.message);
+  // Auth 및 세션 로직 (이름 변경 불필요)
+  const handleGoogleLogin = async () => {
+    try { await accountService.signInWithGoogle(); } 
+    catch (err) { console.error("로그인 실패:", err.message); }
   };
 
-  const handleOpenLogin = () => setAuthModalType('login');
-  const handleOpenSignup = () => setAuthModalType('signup');
-  const handleCloseModal = () => setAuthModalType(null);
   const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (!error) setUser(null);
+    try {
+      await accountService.signOut();
+      setUser(null);
+    } catch (err) { console.error("로그아웃 실패:", err.message); }
   };
+
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => setUser(session?.user ?? null));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      const currentUser = session?.user ?? null;
+    accountService.getUser().then(u => setUser(u));
+    const subscription = accountService.subscribeAuth((currentUser) => {
       setUser(currentUser);
-      if (currentUser) handleCloseModal();
+      if (currentUser) setAuthModalType(null); 
     });
-    return () => subscription.unsubscribe();
+    return () => subscription?.unsubscribe();
   }, []);
 
   return (
     <div className="App" style={{ minHeight: '100vh' }}>
       <TopAuthBar 
         user={user} 
-        onLogin={handleOpenLogin} 
+        onLogin={() => setAuthModalType('login')} 
         onLogout={handleLogout} 
         onMyPageClick={() => setAuthModalType('profile')}
-        onSignup={handleOpenSignup} 
+        onSignup={() => setAuthModalType('signup')}
       />
 
       {authModalType && (
         <AuthModal 
           type={authModalType} 
-          onClose={handleCloseModal} 
-          onGoogleLogin={triggerGoogleLogin} 
+          user={user} 
+          onClose={() => setAuthModalType(null)} 
+          onGoogleLogin={handleGoogleLogin} 
           onLogout={handleLogout}
         />
       )}
@@ -246,26 +245,11 @@ useEffect(() => {
       <section style={{ 
         padding: '20px 40px 0px 40px', 
         display: 'flex',
-        // 💡 location 정보를 사용하여 레이아웃 결정
-        // justifyContent: isReviewPage ? 'space-between' : 'flex-end',
         justifyContent: 'flex-end',  
         alignItems: 'center',
         height: '60px',
         boxSizing: 'border-box'
       }}>
-        {/* 💡 리뷰 페이지에서는 뒤로가기 버튼이 왼쪽에, 검색창이 오른쪽에 위치하도록 조정 
-        {isReviewPage && (
-          <div className="back-navigation">
-            <button 
-              className="back-btn-text" 
-              onClick={handleComplete}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', marginTop: '8px' }}
-            >
-              &larr; 돌아가기
-            </button>
-          </div>
-        )}
-          */}
         <input 
           type="text" 
           value={inputValue}

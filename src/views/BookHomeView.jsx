@@ -1,6 +1,6 @@
 import ItemCard from '../components/ItemCard'; // 💡 이제 이게 진짜 존재해야 해요!
 
-export default function MovieHomeView() {
+export default function BookHomeView() {
   // 진짜 영화 같은 가짜 데이터를 만들어줍니다.
   const dummyMovies = [
     { id: 1, title: '로맨틱 라일락 추천 1', subTitle: '2026', rating: 4.5, image: 'https://via.placeholder.com/500x750?text=Movie+1' },

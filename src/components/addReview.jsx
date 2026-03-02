@@ -4,6 +4,8 @@ import React, { useState,useEffect } from 'react'; // 💡 React.Fragment 사용
 import { useParams,useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabaseClient';
 import MovieProvider from '../services/MovieProvider';
+// 아니 진짜로 그냥 import 안한거였나;;
+import GameProvider from '../services/GameProvider';
 import dataBridge from '../services/DataBridge';
 import '../styles/addReview.css';
 
@@ -30,44 +32,58 @@ useEffect(() => {
       try {
         setLoading(true);
         
-        // 1. 작품 상세 정보 가져오기 (propItem이 없을 때만)
-        let currentItem = propItem;
-        if (!currentItem) {
-          const movieProvider = new MovieProvider(import.meta.env.VITE_TMDB_API_KEY);
-          currentItem = await movieProvider.getDetail(itemId);
-          if (currentItem) setItem(currentItem);
+        // 1. 작품 상세 정보 가져오기 (이미 있으면 스킵)
+        if (!item) {
+          let detailData = null;
+
+          // 💡 카테고리에 따른 데이터 호출 분기 (switch-case)
+          switch (category) {
+            case 'game':
+              const gameProvider = new GameProvider();
+              // Edge Function의 'detail' 타입을 호출하는 함수
+              detailData = await gameProvider.fetchGameById(itemId);
+              break;
+
+            case 'movie':
+            // case 'drama':
+              const movieProvider = new MovieProvider(import.meta.env.VITE_TMDB_API_KEY);
+              detailData = await movieProvider.getDetail(itemId);
+              break;
+
+            // case 'book':
+            //   const bookProvider = new BookProvider();
+            //   detailData = await bookProvider.fetchBookById(itemId);
+            //   break;
+
+            default:
+              console.warn("알 수 없는 카테고리입니다:", category);
+          }
+
+          if (detailData) setItem(detailData);
         }
 
-        // 2. 내 기존 리뷰가 있는지 확인 (로그인 유저인 경우)
+        // 2. 내 기존 리뷰 확인 (기존 로직 유지)
         if (user && itemId) {
           const existingReview = await dataBridge.getMyReview(user.id, itemId);
           if (existingReview) {
             setRating(existingReview.rating);
             setComment(existingReview.comment);
-            setIsEditMode(true);
-            setReviewId(existingReview.id);
-          } else {
-            // 새 리뷰 작성을 위해 초기화
-            setRating(0);
-            setComment('');
-            setIsEditMode(false);
           }
         }
 
-        // 3. 전체 리뷰 목록 가져오기
+        // 3. 전체 리뷰 목록 로드
         const publicReviews = await dataBridge.getReviews(itemId);
         setReviews(publicReviews);
 
       } catch (error) {
         console.error("데이터 로드 중 오류:", error);
-        // ❌ 절대 navigate('/') 하지 마세요!
       } finally {
         setLoading(false);
       }
     };
 
     initPage();
-  }, [itemId, propItem, user]); // 💡 의존성 배열도 깔끔하게 정리
+  }, [itemId, propItem, user,category]);
   // 💡 1. undefined 에러 해결을 위해 변수 정의
   const ratingSteps = [5, 4.5, 4, 3.5, 3, 2.5, 2, 1.5, 1, 0.5];
 
@@ -90,10 +106,11 @@ useEffect(() => {
         await dataBridge.saveComment({
         userId: user.id, 
         contentId: item.id,
-        category: category || 'movie',
+        category: category,
         // comment_type: 'REVIEW', // 일반 리뷰니까 REVIEW
         rating: rating,
-        comment: comment
+        comment: comment,
+        item: item
       });
 
       alert('성공적으로 저장되었습니다! ✨');

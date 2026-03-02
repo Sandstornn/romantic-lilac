@@ -1,0 +1,123 @@
+.profile-view-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 20px;
+  color: #fff;
+  background-color: #141414; /* 넷플릭스 다크 배경 */
+  min-height: 100vh;
+}
+/* 상단: 프로필 정보 섹션 */
+/* 로그아웃을 빼기로 하면서 폐기*/
+/*.profile-top-section {
+  margin-bottom: 50px;
+  padding: 30px;
+  background: linear-gradient(to right, #1e1e1e, #141414);
+  border-radius: 15px;
+}
+*/
+
+.profile-info-card {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+}
+
+.profile-large-img {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  border: 4px solid #E50914; /* 넷플릭스 레드 포인트 */
+}
+
+.profile-text h1 { margin: 0; font-size: 2rem; }
+.profile-email { color: #aaa; margin: 10px 0; }
+
+
+/* 활동 내역 섹션 */
+.section-title {
+  font-size: 1.5rem;
+  margin-bottom: 30px;
+  border-left: 5px solid #E50914;
+  padding-left: 15px;
+}
+
+.activity-row {
+  margin-bottom: 40px;
+}
+
+.category-label {
+  font-size: 1.1rem;
+  color: #e5e5e5;
+  margin-bottom: 10px;
+}
+
+.row-scroll-container {
+  display: flex;
+  gap: 20px;
+  overflow-x: auto;
+  padding: 15px 5px;
+  scroll-behavior: smooth;
+}
+
+/* 스크롤바 커스텀 */
+.row-scroll-container::-webkit-scrollbar { height: 6px; }
+.row-scroll-container::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+.row-scroll-container::-webkit-scrollbar-thumb:hover { background: #E50914; }
+
+/* 개별 카드 */
+.activity-item-card {
+  min-width: 250px;
+  max-width: 250px;
+  background: #222;
+  padding: 20px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  transition: transform 0.3s ease;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+.activity-item-card:hover {
+  transform: translateY(-10px) scale(1.02);
+  background: #2a2a2a;
+}
+
+.item-rating { color: #ffc107; font-weight: bold; margin-bottom: 10px; }
+.item-comment {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: #ddd;
+  height: 4.5em;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+.item-date { font-size: 0.8rem; color: #666; display: block; margin-top: 15px; }
+
+.empty-item { color: #666; padding: 20px; font-style: italic; }
+
+
+/* 💡 로그아웃 버튼 스타일 */
+.profile-logout-btn {
+  background: transparent;
+  color: #ccc; /* 닫기 버튼과 비슷한 회색 */
+  border: 1px solid #444;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+/* 마우스 올렸을 때: 넷플릭스 레드나 밝은 회색으로 강조 */
+.profile-logout-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border-color: #e50914; /* 💡 포인트 컬러로 넷플릭스 레드 사용 */
+  box-shadow: 0 0 10px rgba(229, 9, 20, 0.2);
+}
+
+.profile-logout-btn:active {
+  transform: scale(0.95);
+}

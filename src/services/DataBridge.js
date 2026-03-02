@@ -3,23 +3,52 @@
 import { supabase } from './supabaseClient';
 
 class DataBridge {
-  // 💡 리뷰 저장
-  async saveComment({ userId, contentId, category, rating, comment, parentId = null }) {
+  // 💡 리뷰 저장 (item 매개변수 추가: API에서 받은 원본 데이터)
+  async saveComment({ userId, contentId, category, rating, comment, item, parentId = null }) {
+    let metadata = {};
+
+    // 💡 카테고리에 따라 저장할 상세 정보를 다르게 구성합니다.
+    switch (category) {
+      case 'movie':
+      case 'drama':
+        metadata = {
+          poster_path: item.poster_path,
+          release_date: item.release_date,
+          overview: item.overview
+        };
+        break;
+
+      case 'game':
+        metadata = {
+          cover_url: item.poster_path, // IGDB 가공 이미지 주소
+          release_year: item.release_date,
+          summary: item.overview,
+          platforms: item.platforms || [] // 게임용 특화 데이터
+        };
+        break;
+
+      default:
+        metadata = { 
+          display_image: item.poster_path || item.thumbnail,
+          description: item.overview || item.summary 
+        };
+    }
+
     const { data, error } = await supabase
       .from('reviews')
       .upsert([{
         user_id: userId,
         content_id: String(contentId),
-        media_type: category,
-        comment_type: 'REVIEW', // 'REVIEW' 또는 'REPLY'
+        media_type: category, // 사용자님의 기존 필드명 유지
+        comment_type: 'REVIEW',
         rating: parseFloat(rating),
         comment: comment,
-        parent_id: null,
-        // 업데이트 될 때 마다 최신 댓글로 보이도록 created_at도 갱신
+        parent_id: parentId,
+        metadata: metadata, // 💡 새롭게 추가된 JSONB 필드
         created_at: new Date().toISOString()
       }], {
-      onConflict: 'user_id, content_id' // 유저 한 명당 한 작품에 하나의 리뷰만 남기도록 설정
-        })
+        onConflict: 'user_id, content_id'
+      })
       .select();
 
     if (error) throw error;
@@ -64,6 +93,25 @@ class DataBridge {
   if (error) throw error;
   return data;
 }
+
+  // 대댓글 말고 리뷰들만 가져오기 -> 마이페이지 리뷰 관리용
+  async getMyAllReviews(userId, category) {
+  const { data, error } = await supabase
+    .from('reviews')
+    .select(`
+      *,
+      profiles ( nickname, avatar_url ) -- profiles 테이블 정보를 조인해서 가져옴
+    `)
+    .eq('user_id', userId)
+    .eq('media_type', category)
+    .is('parent_id', null)
+    // 별점이 높으면 위로 오도록 설정
+    .order('rating',  { ascending: false });
+
+  if (error) throw error;
+  return data;
+}
+
 }
 
 export default new DataBridge(); // 어디서든 바로 쓸 수 있게 인스턴스로 수출

@@ -1,0 +1,59 @@
+/* activityRow.css */
+.activity-row {
+  margin-bottom: 40px;
+  text-align: left;
+}
+
+.row-title {
+  font-size: 1.2rem;
+  color: #e5e5e5;
+  margin-bottom: 15px;
+  padding-left: 5px;
+  font-weight: bold;
+}
+
+.row-scroll-container {
+  display: flex;
+  gap: 20px;
+  overflow-x: auto; /* 가로 스크롤 */
+  padding: 10px 5px;
+  scroll-behavior: smooth;
+}
+
+/* 스크롤바 디자인 */
+.row-scroll-container::-webkit-scrollbar { height: 6px; }
+.row-scroll-container::-webkit-scrollbar-thumb { 
+  background: #444; 
+  border-radius: 10px; 
+}
+.row-scroll-container::-webkit-scrollbar-thumb:hover { background: #E50914; }
+
+/* 카드 스타일 */
+.activity-card {
+  min-width: 260px;
+  background: #232323;
+  padding: 20px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  transition: transform 0.3s ease, background 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+}
+
+.activity-card:hover {
+  transform: scale(1.05);
+  background: #2d2d2d;
+}
+
+.card-rating { color: #f1c40f; font-weight: bold; margin-bottom: 10px; }
+.card-comment {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: #ccc;
+  height: 4.5em; /* 3줄 정도 고정 */
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+.card-date { display: block; margin-top: 15px; font-size: 0.8rem; color: #666; }
+.empty-card { color: #555; padding: 20px; font-style: italic; }

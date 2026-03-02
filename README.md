@@ -18,7 +18,7 @@
 ```text
 romantic-lilac/
 ├── src/
-│   ├── components/    # MovieCard, Navbar 등 재사용 가능한 UI 부품
+│   ├── components/    # ItemCard, Navbar 등 재사용 가능한 UI 부품
 │   ├── views/         # Home, SearchResult, MovieHome 등 페이지 단위 뷰
 │   ├── services/      # Provider (API 요청 로직)
 │   ├── styles/        # CSS 디자인 파일
