@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 
+import AnimationProvider from './services/AnimationProvider';
 import MovieProvider from './services/MovieProvider';
 import GameProvider from './services/GameProvider';
+import SeriesProvider from './services/SeriesProvider';
 // import BookProvider from './services/BookProvider'; 
 
 import Navbar from './components/Navbar';
@@ -13,7 +15,7 @@ import DefaultHomeView from './views/DefaultHomeView';
 import SearchResultView from './views/SearchResultView';
 import MovieHomeView from './views/MovieHomeView';
 import MusicHomeView from './views/MusicHomeView';
-import DramaHomeView from './views/DramaHomeView';
+import SeriesHomeView from './views/SeriesHomeView';
 import AnimationHomeView from './views/AnimationHomeView';
 import GameHomeView from './views/GameHomeView';
 import BookHomeView from './views/BookHomeView';
@@ -27,7 +29,7 @@ import AuthModal from './components/AuthModal';
 const HOME_VIEWS = {
   movie: (props) => <MovieHomeView {...props} />,
   music: (props) => <MusicHomeView {...props} />,
-  drama: (props) => <DramaHomeView {...props} />,
+  series: (props) => <SeriesHomeView {...props} />,
   animation: (props) => <AnimationHomeView {...props} />,
   game: (props) => <GameHomeView {...props} />,
   book: (props) => <BookHomeView {...props} />,
@@ -132,6 +134,8 @@ function App() {
   const movieProvider = new MovieProvider(import.meta.env.VITE_TMDB_API_KEY);
   const gameProvider = new GameProvider(import.meta.env.VITE_IGDB_CLIENT_ID, import.meta.env.VITE_IGDB_CLIENT_SECRET);
 
+  const animationProvider = new AnimationProvider(import.meta.env.VITE_TMDB_API_KEY);
+
   const isFetching = useRef(false);
   const observer = useRef();
 
@@ -151,6 +155,7 @@ function App() {
     isFetching.current = true;
     try {
       let results = [];
+      let totalPages = 0;
       
       if (category === 'movie') {
         results = await movieProvider.search(query, targetPage);
@@ -158,7 +163,13 @@ function App() {
         results = await gameProvider.search(query,targetPage); 
       } else if (category === 'book') {
         results = await BookProvider.search(query);
-      } else {
+      } else if (category === 'animation') {
+        results = await animationProvider.search(query, targetPage);
+      } else if(category === 'series') {
+        const seriesProvider = new SeriesProvider(import.meta.env.VITE_TMDB_API_KEY);
+        results = await seriesProvider.search(query, targetPage);
+       }
+      else {
         results = await movieProvider.search(query, targetPage);
       }
 
@@ -167,6 +178,14 @@ function App() {
         const allItems = targetPage === 1 ? results : [...prev, ...results];
         const uniqueMap = new Map();
         allItems.forEach(m => uniqueMap.set(String(m.id), m));
+
+        // 💡 [핵심] 만약 애니메이션인데 필터링 결과가 너무 적으면(예: 4개 미만) 
+      // 💡 사용자가 스크롤하기 전에 자동으로 다음 페이지를 한 번 더 부릅니다.
+      if (category === 'animation' && results.length < 15 && targetPage < 10) {
+        // 끝까지 가면 무한루프 도니까 조심.
+        setTimeout(() => setPage(prev => prev + 1), 500); // 0.5초 후에 다음 페이지 로드 시도
+      }
+
         return Array.from(uniqueMap.values());
       });
     } catch (error) {

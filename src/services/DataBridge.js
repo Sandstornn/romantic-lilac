@@ -9,12 +9,26 @@ class DataBridge {
 
     // 💡 카테고리에 따라 저장할 상세 정보를 다르게 구성합니다.
     switch (category) {
+      case 'animation':
+         metadata = {
+        poster_path: item.image,           // 포스터 URL
+        release_date: item.subTitle, // 개봉/방영 연도
+        overview: item.overview || item.description, // 줄거리
+        
+      };
+        break;
       case 'movie':
-      case 'drama':
+         metadata = {
+          poster_path: item.poster_path,
+          release_date: item.release_date,
+          overview: item.overview|| item.description|| item.summary
+        };
+        break;
+      case 'series':
         metadata = {
           poster_path: item.poster_path,
           release_date: item.release_date,
-          overview: item.overview
+          overview: item.overview|| item.description|| item.summary
         };
         break;
 

@@ -7,7 +7,7 @@ export default function ProfileView({ user, onLogout }) {
   const [activities, setActivities] = useState({});
   const [loading, setLoading] = useState(false);
 
-  const categories = ['movie', 'drama', 'anime', 'game', 'music', 'book'];
+  const categories = ['movie', 'series', 'animation', 'game', 'music', 'book'];
 
   useEffect(() => {
     if (user) {

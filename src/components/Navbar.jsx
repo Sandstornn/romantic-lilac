@@ -1,5 +1,5 @@
 export default function Navbar({ onLogoClick, onGenreClick }) {
-  const genres = ['movie', 'drama', 'animation', 'game', 'music', 'book'];
+  const genres = ['movie', 'series', 'animation', 'game', 'music', 'book'];
 
   return (
     <nav id="index_Home_page">

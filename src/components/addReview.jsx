@@ -4,8 +4,10 @@ import React, { useState,useEffect } from 'react'; // 💡 React.Fragment 사용
 import { useParams,useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabaseClient';
 import MovieProvider from '../services/MovieProvider';
+import SeriesProvider from '../services/SeriesProvider'; // 💡 시리즈 프로바이더 추가
 // 아니 진짜로 그냥 import 안한거였나;;
 import GameProvider from '../services/GameProvider';
+import AnimationProvider from '../services/AnimationProvider';
 import dataBridge from '../services/DataBridge';
 import '../styles/addReview.css';
 
@@ -45,11 +47,18 @@ useEffect(() => {
               break;
 
             case 'movie':
-            // case 'drama':
+            // case 'series':
               const movieProvider = new MovieProvider(import.meta.env.VITE_TMDB_API_KEY);
-              detailData = await movieProvider.getDetail(itemId);
+              detailData = await movieProvider.fetchMovieById(itemId);
               break;
-
+            case 'animation':
+              const animationProvider = new AnimationProvider(import.meta.env.VITE_TMDB_API_KEY);
+              detailData = await animationProvider.fetchAnimeById(itemId);
+              break;
+            case 'series':
+              const seriesProvider = new SeriesProvider(import.meta.env.VITE_TMDB_API_KEY);
+              detailData = await seriesProvider.fetchSeriesById(itemId);
+              break;
             // case 'book':
             //   const bookProvider = new BookProvider();
             //   detailData = await bookProvider.fetchBookById(itemId);

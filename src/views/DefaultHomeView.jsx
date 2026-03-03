@@ -1,31 +1,50 @@
-import MovieCard from '../components/MovieCard'; // 💡 이제 이게 진짜 존재해야 해요!
+// src/views/DefaultHomeView.jsx
+import React, { useEffect, useState } from 'react';
+import ItemCard from '../components/ItemCard';
+import GameProvider from '../services/GameProvider';
 
-export default function DefaultHomeView() {
-  // 진짜 영화 같은 가짜 데이터를 만들어줍니다.
-  const dummyMovies = [
-    { id: 1, title: '로맨틱 라일락 추천 1', subTitle: '2026', rating: 4.5, image: 'https://via.placeholder.com/500x750?text=Movie+1' },
-    { id: 2, title: '로맨틱 라일락 추천 2', subTitle: '2026', rating: 4.2, image: 'https://via.placeholder.com/500x750?text=Movie+2' },
-    { id: 3, title: '로맨틱 라일락 추천 3', subTitle: '2025', rating: 4.8, image: 'https://via.placeholder.com/500x750?text=Movie+3' },
-    { id: 4, title: '로맨틱 라일락 추천 4', subTitle: '2024', rating: 3.9, image: 'https://via.placeholder.com/500x750?text=Movie+4' },
-    { id: 5, title: '로맨틱 라일락 추천 5', subTitle: '2026', rating: 5.0, image: 'https://via.placeholder.com/500x750?text=Movie+5' },
-  ];
+export default function DefaultHomeView({ onItemClick }) {
+  const [games, setGames] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // 💡 환경변수 확인용 (콘솔에 찍어서 뜨는지 보세요)
+  console.log("ID 확인:", import.meta.env.VITE_IGDB_CLIENT_ID);
+
+  const gameProvider = new GameProvider(
+    import.meta.env.VITE_IGDB_CLIENT_ID,
+    import.meta.env.VITE_IGDB_CLIENT_SECRET
+  );
+
+  useEffect(() => {
+    const fetchMario = async () => {
+      try {
+        const results = await gameProvider.search('마리오', 1);
+        console.log("서버에서 받은 데이터:", results); // 💡 여기서 데이터가 출력되는지 확인!
+        setGames(Array.isArray(results) ? results : []);
+      } catch (e) {
+        console.error("호출 실패:", e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchMario();
+  }, []);
+
+  if (loading) return <div style={{color:'white', textAlign:'center'}}>마리오 찾는 중...</div>;
 
   return (
-    <>
-      <h2 style={{ fontSize: '1.4rem', marginBottom: '20px', fontWeight: 'bold' }}>
-        Romantic Lilac 추천 콘텐츠
-      </h2>
-      
-      <div className="content-grid" style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', 
-        gap: '25px' 
-      }}>
-        {/* 💡 복잡한 div 대신 MovieCard 하나로 끝! */}
-        {dummyMovies.map((movie) => (
-          <MovieCard key={movie.id} movie={movie} />
-        ))}
+    <div style={{ padding: '20px' }}>
+      <h2 style={{ color: 'white', marginBottom: '20px' }}>마리오 검색 결과</h2>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '20px' }}>
+        {games.length > 0 ? (
+          games.map((g) => (
+            // 💡 핵심: item={g} 라고 줘야 ItemCard가 알아먹습니다!
+            <ItemCard key={g.id} item={g} onClick={onItemClick} />
+          ))
+        ) : (
+          <p style={{color:'gray'}}>데이터가 비어있습니다. 네트워크 탭의 Response를 확인하세요.</p>
+        )}
       </div>
-    </>
+    </div>
   );
 }
