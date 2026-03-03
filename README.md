@@ -12,7 +12,7 @@
 * **Frontend**: React, Vite
 * **Styling**: CSS
 * **Package Manager**: npm
-* **API**: Fetch API (TMDB)
+* **API**: Fetch API (TMDB), IGDB
 
 ## 📂 프로젝트 구조
 ```text
@@ -35,6 +35,12 @@ romantic-lilac/
 **[ ] 뒤로가기 사용**: 실제 뒤로가기 버튼을 사용가능도록 library 도입.
 
 **[ ] 내 정보 업데이트**: 내 정보에서 나의 모든 활동들 확인 가능.
+
+**[ ] race condition**: 데이터가 날아오는 순서로 받고 있어서 새로고침 했을 때 순서 유지가 안된다. 이 문제를 해결할 예정이다.
+
+**[ ] more game db**: igdb는 한글 지원을 거의 안해서 igdb에서 일단 찾아서 보여주고, naver->steam순으로 찾아가면서 그래도 한글 설명이 없거나 데이터가 없으면 igdb데이터로 보여줘야겠다.
+
+
 
 
 

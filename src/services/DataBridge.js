@@ -11,7 +11,7 @@ class DataBridge {
     switch (category) {
       case 'animation':
          metadata = {
-        poster_path: item.image,           // 포스터 URL
+        poster_path: item.image|| item.poster_path,           // 포스터 URL
         release_date: item.subTitle, // 개봉/방영 연도
         overview: item.overview || item.description, // 줄거리
         
@@ -19,14 +19,14 @@ class DataBridge {
         break;
       case 'movie':
          metadata = {
-          poster_path: item.poster_path,
+          poster_path: item.poster_path|| item.image,
           release_date: item.release_date,
           overview: item.overview|| item.description|| item.summary
         };
         break;
       case 'series':
         metadata = {
-          poster_path: item.poster_path,
+          poster_path: item.poster_path|| item.image, 
           release_date: item.release_date,
           overview: item.overview|| item.description|| item.summary
         };
@@ -40,7 +40,20 @@ class DataBridge {
           platforms: item.platforms || [], // 게임용 특화 데이터
         };
         break;
-
+      case 'book':
+        metadata = {
+          poster_path: item.image,
+          release_date: item.relase_date,
+          overview: item.description || item.overview
+        };
+        break;
+      case 'music':
+        metadata = {
+          poster_path: item.image,
+          release_date: item.relase_date,
+          overview: item.description || item.overview
+        };
+        break;
       default:
         metadata = { 
           display_image: item.poster_path || item.thumbnail,

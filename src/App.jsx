@@ -5,6 +5,8 @@ import AnimationProvider from './services/AnimationProvider';
 import MovieProvider from './services/MovieProvider';
 import GameProvider from './services/GameProvider';
 import SeriesProvider from './services/SeriesProvider';
+import BookProvider from './services/BookProvider';
+import MusicProvider from './services/MusicProvider';
 // import BookProvider from './services/BookProvider'; 
 
 import Navbar from './components/Navbar';
@@ -133,8 +135,10 @@ function App() {
   // movie 전용 코드는 이름 유지
   const movieProvider = new MovieProvider(import.meta.env.VITE_TMDB_API_KEY);
   const gameProvider = new GameProvider(import.meta.env.VITE_IGDB_CLIENT_ID, import.meta.env.VITE_IGDB_CLIENT_SECRET);
-
   const animationProvider = new AnimationProvider(import.meta.env.VITE_TMDB_API_KEY);
+  const seriesProvider = new SeriesProvider(import.meta.env.VITE_TMDB_API_KEY);
+  const bookProvider = new BookProvider(import.meta.env.VITE_SUPABASE_URL);
+  const musicProvider = new MusicProvider(import.meta.env.VITE_SUPABASE_URL);
 
   const isFetching = useRef(false);
   const observer = useRef();
@@ -150,55 +154,52 @@ function App() {
     if (node) observer.current.observe(node);
   }, []);
 
-  const fetchItems = async (query, targetPage,category) => {
-    if (isFetching.current) return;
-    isFetching.current = true;
-    try {
-      let results = [];
-      let totalPages = 0;
+  const fetchItems = async (query, targetPage, category) => { // 💡 매개변수 category 사용!
+  if (isFetching.current) return;
+  isFetching.current = true;
+  
+  try {
+    let results = [];
+    
+    // 💡 1. 각 카테고리별 데이터 가져오기 (BookProvider 호출은 일단 주석처리 하세요!)
+    if (category === 'movie') results = await movieProvider.search(query, targetPage);
+    else if (category === 'game') results = await gameProvider.search(query, targetPage);
+    else if (category === 'animation') results = await animationProvider.search(query, targetPage);
+    else if (category === 'series') results = await seriesProvider.search(query, targetPage);
+    else if (category === 'book') results = await bookProvider.search(query, targetPage);
+    else if (category === 'music') results = await musicProvider.search(query, targetPage);
+
+    // 💡 2. 데이터 병합 및 중복 제거
+    setItems(prev => {
+      const allItems = targetPage === 1 ? results : [...prev, ...results];
+      const uniqueMap = new Map();
       
-      if (category === 'movie') {
-        results = await movieProvider.search(query, targetPage);
-      } else if (category === 'game') {
-        results = await gameProvider.search(query,targetPage); 
-      } else if (category === 'book') {
-        results = await BookProvider.search(query);
-      } else if (category === 'animation') {
-        results = await animationProvider.search(query, targetPage);
-      } else if(category === 'series') {
-        const seriesProvider = new SeriesProvider(import.meta.env.VITE_TMDB_API_KEY);
-        results = await seriesProvider.search(query, targetPage);
-       }
-      else {
-        results = await movieProvider.search(query, targetPage);
+      // 💡 [수정] activeCategory 대신 파라미터 category를 사용!
+      if (category === 'game') {
+        // 게임은 제목이 겹치는 경우가 많으니 title을 키로 사용
+        allItems.forEach(m => { if(m.title) uniqueMap.set(m.title, m); });
+      } else {
+        // 나머지는 ID를 키로 사용
+        allItems.forEach(m => { if(m.id) uniqueMap.set(String(m.id), m); });
       }
+      return Array.from(uniqueMap.values());
+    });
 
-      setItems(prev => {
-        // 💡 내부 변수명도 generic하게: allMovies -> allItems
-        const allItems = targetPage === 1 ? results : [...prev, ...results];
-        const uniqueMap = new Map();
-        allItems.forEach(m => uniqueMap.set(String(m.id), m));
-
-        // 💡 [핵심] 만약 애니메이션인데 필터링 결과가 너무 적으면(예: 4개 미만) 
-      // 💡 사용자가 스크롤하기 전에 자동으로 다음 페이지를 한 번 더 부릅니다.
-      if (category === 'animation' && results.length < 15 && targetPage < 10) {
-        // 끝까지 가면 무한루프 도니까 조심.
-        setTimeout(() => setPage(prev => prev + 1), 500); // 0.5초 후에 다음 페이지 로드 시도
-      }
-
-        return Array.from(uniqueMap.values());
-      });
-    } catch (error) {
-      console.error(error);
-    } finally {
-      if (targetPage === 1) setLoading(false);
-      isFetching.current = false;
+    if (results.length > 0 && results.length < 19 && targetPage < 10) {
+      setTimeout(() => setPage(prev => prev + 1), 500);
     }
-  };
+
+  } catch (error) {
+    console.error("검색 실패 원인:", error); // 💡 여기서 어떤 에러인지 콘솔을 확인하세요!
+  } finally {
+    if (targetPage === 1) setLoading(false);
+    isFetching.current = false;
+  }
+};
 
   useEffect(() => {
-    if (searchQuery) fetchItems(searchQuery, page, activeCategory); // 💡 fetchItems로 호출
-  }, [page, searchQuery, activeCategory]); // 💡 activeCategory도 의존성에 추가
+    if (searchQuery) fetchItems(searchQuery, page, activeCategory); 
+  }, [page, searchQuery, activeCategory]); 
 
   const handleSearch = (e) => {
     if (e.key === 'Enter' && inputValue.trim() !== '') {
@@ -207,7 +208,7 @@ function App() {
   };
 
   const goHome = () => {
-    setItems([]); // 💡 movies -> items
+    setItems([]); 
     setSearchQuery('');
     setInputValue('');
     navigate('/'); 
@@ -215,7 +216,7 @@ function App() {
 
   const handleGenreClick = (genre) => { 
     setActiveCategory(genre);
-    setItems([]); // 💡 movies -> items
+    setItems([]); 
     setSearchQuery('');
     setInputValue('');
     navigate(`/${genre}`); 

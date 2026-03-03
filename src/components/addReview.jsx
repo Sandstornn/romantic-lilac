@@ -1,10 +1,13 @@
 // src/components/AddReview.jsx
-import React, { useState,useEffect } from 'react'; // 💡 React.Fragment 사용을 위해 React 추가
+import React, { useState,useEffect } from 'react';
 // 라우팅용
 import { useParams,useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabaseClient';
 import MovieProvider from '../services/MovieProvider';
-import SeriesProvider from '../services/SeriesProvider'; // 💡 시리즈 프로바이더 추가
+import SeriesProvider from '../services/SeriesProvider';
+import BookProvider from '../services/BookProvider';
+import MusicProvider from '../services/MusicProvider';
+
 // 아니 진짜로 그냥 import 안한거였나;;
 import GameProvider from '../services/GameProvider';
 import AnimationProvider from '../services/AnimationProvider';
@@ -17,16 +20,16 @@ export default function AddReview({ item: propItem, category, onComplete ,user})
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
 
-  const { itemId } = useParams(); // URL에서 itemId를 가져옵니다.
-  // 상태 관리: 전달받은 item이 있으면 그것을 사용, 없으면 새로 불러온 데이터를 담음
+  const { itemId } = useParams();
+
   const [item, setItem] = useState(propItem || null);
-  const [loading, setLoading] = useState(!propItem); // item이 없으면 로딩 시작
+  const [loading, setLoading] = useState(!propItem);
 
 
-  // addReview 컴포넌트에서 편집 모드 여부와 리뷰 ID 상태 추가
+  // addReview에서 편집 모드 여부와 리뷰 ID 상태 추가
   const [isEditMode, setIsEditMode] = useState(false); 
   const [reviewId, setReviewId] = useState(null);
-  const [reviews, setReviews] = useState([]); // 💡 우측 목록용 상태
+  const [reviews, setReviews] = useState([]); 
 useEffect(() => {
     const initPage = async () => {
       if (!itemId) return;
@@ -38,7 +41,6 @@ useEffect(() => {
         if (!item) {
           let detailData = null;
 
-          // 💡 카테고리에 따른 데이터 호출 분기 (switch-case)
           switch (category) {
             case 'game':
               const gameProvider = new GameProvider();
@@ -59,11 +61,16 @@ useEffect(() => {
               const seriesProvider = new SeriesProvider(import.meta.env.VITE_TMDB_API_KEY);
               detailData = await seriesProvider.fetchSeriesById(itemId);
               break;
-            // case 'book':
-            //   const bookProvider = new BookProvider();
-            //   detailData = await bookProvider.fetchBookById(itemId);
-            //   break;
-
+             case 'book':
+               const bookProvider = new BookProvider();
+               
+               detailData = await bookProvider.fetchBookById(itemId);
+               break;
+            case 'music':
+               const musicProvider = new MusicProvider();
+               detailData = await musicProvider.fetchMusicById(itemId);
+               break;
+                
             default:
               console.warn("알 수 없는 카테고리입니다:", category);
           }
